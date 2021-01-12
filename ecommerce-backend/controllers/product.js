@@ -154,7 +154,6 @@ exports.remove = (req, res) => {
 };
 
 //PRODUCT LIST
-
 /**
  * sell / arrival
  * by sell = /products?sortBy=sold&order=desc&limit=4
@@ -214,7 +213,6 @@ exports.listCategories = (req, res) => {
   });
 };
 
-
 //LIST PRODUCTS BY SERACH
 /**
  * list products by search
@@ -270,12 +268,11 @@ exports.listBySearch = (req, res) => {
     });
 };
 
-
 //PHOTO
 exports.photo = (req, res, next) => {
   if (req.product.photo.data) {
-    res.set('Content-Type', req.product.photo.contentType)
-    return res.send(req.product.photo.data)
+    res.set("Content-Type", req.product.photo.contentType);
+    return res.send(req.product.photo.data);
   }
-  next()
-}
+  next();
+};
