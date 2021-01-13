@@ -4,7 +4,25 @@ const fs = require("fs");
 const Product = require("../models/product");
 const { errorHandler } = require("../helpers/dbErrorHandler");
 
-//CREATE
+exports.productById = (req, res, next, id) => {
+  Product.findById(id)
+    .populate("Category")
+    .exec((err, product) => {
+      if (err || !product) {
+        return res.status(400).json({
+          error: "Product not found",
+        });
+      }
+      req.product = product;
+      next();
+    });
+};
+
+exports.read = (req, res) => {
+  req.product.photo = undefined;
+  return res.json(req.product);
+};
+
 exports.create = (req, res) => {
   let form = new formidable.IncomingForm();
   form.keepExtensions = true;
@@ -58,33 +76,20 @@ exports.create = (req, res) => {
   });
 };
 
-//READ
-//ProductById
-exports.productById = (req, res, next, id) => {
-  Product.findById(id)
-    .populate("category")
-    .exec((err, product) => {
-      if (err || !product) {
-        return res.status(400).json({
-          error: "Product not found",
-        });
-      }
-      req.product = product;
-      next();
+exports.remove = (req, res) => {
+  let product = req.product;
+  product.remove((err, deletedProduct) => {
+    if (err) {
+      return res.status(400).json({
+        error: errorHandler(err),
+      });
+    }
+    res.json({
+      message: "Product deleted successfully",
     });
+  });
 };
 
-exports.read = (req, res) => {
-  req.product.photo = undefined;
-  return res.json(req.product);
-};
-
-exports.read = (req, res) => {
-  req.product.photo = undefined;
-  return res.json(req.product);
-};
-
-//UPDATE
 exports.update = (req, res) => {
   let form = new formidable.IncomingForm();
   form.keepExtensions = true;
@@ -95,22 +100,6 @@ exports.update = (req, res) => {
       });
     }
 
-    //check for all fields
-    const { name, description, price, category, quantity, shipping } = fields;
-
-    if (
-      !name ||
-      !description ||
-      !price ||
-      !category ||
-      !quantity ||
-      !shipping
-    ) {
-      return res.status(400).json({
-        error: "All fields are required",
-      });
-    }
-    //updates product with new feilds
     let product = req.product;
     product = _.extend(product, fields);
 
@@ -130,7 +119,6 @@ exports.update = (req, res) => {
 
     product.save((err, result) => {
       if (err) {
-        console.log("PRODUCT CREATE ERROR ", err);
         return res.status(400).json({
           error: errorHandler(err),
         });
@@ -140,22 +128,6 @@ exports.update = (req, res) => {
   });
 };
 
-//DELETE
-exports.remove = (req, res) => {
-  let product = req.product;
-  product.remove((err, deleteProduct) => {
-    if (err) {
-      return res.status(400).json({
-        error: errorHandler(err),
-      });
-    }
-    res.json({
-      message: "Product deleted succesfully!",
-    });
-  });
-};
-
-//PRODUCT LIST
 /**
  * sell / arrival
  * by sell = /products?sortBy=sold&order=desc&limit=4
@@ -170,7 +142,7 @@ exports.list = (req, res) => {
 
   Product.find()
     .select("-photo")
-    .populate("category")
+    .populate("Category")
     .sort([[sortBy, order]])
     .limit(limit)
     .exec((err, products) => {
@@ -183,13 +155,14 @@ exports.list = (req, res) => {
     });
 };
 
-//RELATED PRODUCTS
 /**
  * it will find the products based on the req product category
  * other products that has the same category, will be returned
  */
+
 exports.listRelated = (req, res) => {
   let limit = req.query.limit ? parseInt(req.query.limit) : 6;
+
   Product.find({ _id: { $ne: req.product }, category: req.product.category })
     .limit(limit)
     .populate("category", "_id name")
@@ -203,7 +176,6 @@ exports.listRelated = (req, res) => {
     });
 };
 
-//List actegories based on products
 exports.listCategories = (req, res) => {
   Product.distinct("category", {}, (err, categories) => {
     if (err) {
@@ -215,7 +187,6 @@ exports.listCategories = (req, res) => {
   });
 };
 
-//LIST PRODUCTS BY SERACH
 /**
  * list products by search
  * we will implement product search in react frontend
@@ -223,8 +194,6 @@ exports.listCategories = (req, res) => {
  * as the user clicks on those checkbox and radio buttons
  * we will make api request and show the products to users based on what he wants
  */
-
-// route - make sure its post
 
 exports.listBySearch = (req, res) => {
   let order = req.body.order ? req.body.order : "desc";
@@ -253,7 +222,7 @@ exports.listBySearch = (req, res) => {
 
   Product.find(findArgs)
     .select("-photo")
-    .populate("category")
+    .populate("Category")
     .sort([[sortBy, order]])
     .skip(skip)
     .limit(limit)
@@ -268,6 +237,14 @@ exports.listBySearch = (req, res) => {
         data,
       });
     });
+};
+
+exports.photo = (req, res, next) => {
+  if (req.product.photo.data) {
+    res.set("Content-Type", req.product.photo.contentType);
+    return res.send(req.product.photo.data);
+  }
+  next();
 };
 
 exports.listSearch = (req, res) => {
@@ -293,11 +270,22 @@ exports.listSearch = (req, res) => {
   }
 };
 
-//PHOTO
-exports.photo = (req, res, next) => {
-  if (req.product.photo.data) {
-    res.set("Content-Type", req.product.photo.contentType);
-    return res.send(req.product.photo.data);
-  }
-  next();
+exports.decreaseQuantity = (req, res, next) => {
+  let bulkOps = req.body.order.products.map((item) => {
+    return {
+      updateOne: {
+        filter: { _id: item._id },
+        update: { $inc: { quantity: -item.count, sold: +item.count } },
+      },
+    };
+  });
+
+  Product.bulkWrite(bulkOps, {}, (error, products) => {
+    if (error) {
+      return res.status(400).json({
+        error: "Could not update product",
+      });
+    }
+    next();
+  });
 };

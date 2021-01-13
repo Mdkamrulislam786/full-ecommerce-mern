@@ -17,11 +17,9 @@ export const getProducts = (sortBy) => {
 export const getCategories = () => {
   return fetch(`${API}/categories`, {
     method: "GET",
-  })
-    .then((response) => {
+  }).then((response) => {
       return response.json();
-    })
-    .catch((err) => console.log(err));
+    }).catch((err) => console.log(err));
 };
 
 //GETTING FILTERED PRODUCTS
