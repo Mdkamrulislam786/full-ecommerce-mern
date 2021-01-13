@@ -59,3 +59,25 @@ export const list = (params) => {
     })
     .catch((err) => console.log(err));
 };
+
+//GET PRODUCT
+export const read = (productId) => {
+  return fetch(`${API}/product/${productId}`, {
+    method: "GET",
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => console.log(err));
+};
+
+//GET RELATED PRODUCTS
+export const listRelated = (productId) => {
+  return fetch(`${API}/products/related/${productId}`, {
+    method: "GET",
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => console.log(err));
+};

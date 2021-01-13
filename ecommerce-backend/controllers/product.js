@@ -61,15 +61,17 @@ exports.create = (req, res) => {
 //READ
 //ProductById
 exports.productById = (req, res, next, id) => {
-  Product.findById(id).exec((err, product) => {
-    if (err || !product) {
-      return res.status(400).json({
-        error: "Product not found",
-      });
-    }
-    req.product = product;
-    next();
-  });
+  Product.findById(id)
+    .populate("category")
+    .exec((err, product) => {
+      if (err || !product) {
+        return res.status(400).json({
+          error: "Product not found",
+        });
+      }
+      req.product = product;
+      next();
+    });
 };
 
 exports.read = (req, res) => {
@@ -168,7 +170,7 @@ exports.list = (req, res) => {
 
   Product.find()
     .select("-photo")
-    .populate("Category")
+    .populate("category")
     .sort([[sortBy, order]])
     .limit(limit)
     .exec((err, products) => {
@@ -190,7 +192,7 @@ exports.listRelated = (req, res) => {
   let limit = req.query.limit ? parseInt(req.query.limit) : 6;
   Product.find({ _id: { $ne: req.product }, category: req.product.category })
     .limit(limit)
-    .populate("Category", "_id name")
+    .populate("category", "_id name")
     .exec((err, products) => {
       if (err) {
         return res.status(400).json({
@@ -251,7 +253,7 @@ exports.listBySearch = (req, res) => {
 
   Product.find(findArgs)
     .select("-photo")
-    .populate("Category")
+    .populate("category")
     .sort([[sortBy, order]])
     .skip(skip)
     .limit(limit)
