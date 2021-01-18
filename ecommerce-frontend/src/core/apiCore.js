@@ -1,7 +1,6 @@
 import { API } from "../config";
 import queryString from "query-string";
 
-
 //GET PRODUCTS
 export const getProducts = (sortBy) => {
   return fetch(`${API}/products?sortBy=${sortBy}&order=desc&limit=6`, {
@@ -17,9 +16,11 @@ export const getProducts = (sortBy) => {
 export const getCategories = () => {
   return fetch(`${API}/categories`, {
     method: "GET",
-  }).then((response) => {
+  })
+    .then((response) => {
       return response.json();
-    }).catch((err) => console.log(err));
+    })
+    .catch((err) => console.log(err));
 };
 
 //GETTING FILTERED PRODUCTS
@@ -73,6 +74,23 @@ export const read = (productId) => {
 export const listRelated = (productId) => {
   return fetch(`${API}/products/related/${productId}`, {
     method: "GET",
+  })
+    .then((response) => {
+      return response.json();
+    })
+    .catch((err) => console.log(err));
+};
+
+//CREATE ORDER
+export const createOrder = (userId, token, createOrderData) => {
+  return fetch(`${API}/order/create/${userId}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ order: createOrderData }),
   })
     .then((response) => {
       return response.json();
