@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { createOrder } from "./apiCore";
+import {
+  getProducts,
+  getBraintreeClientToken,
+  processPayment,
+  createOrder,
+} from "./apiCore";
 import { emptyCart } from "./cartHelpers";
 import Card from "./Card";
-import { isAuthenticated } from "../Auth";
+import { isAuthenticated } from "../auth";
 import { Link } from "react-router-dom";
+
 
 const Checkout = ({ products, setRun = (f) => f, run = undefined }) => {
   const [data, setData] = useState({
@@ -17,6 +23,17 @@ const Checkout = ({ products, setRun = (f) => f, run = undefined }) => {
 
   const userId = isAuthenticated() && isAuthenticated().user._id;
   const token = isAuthenticated() && isAuthenticated().token;
+
+  const init = () => {
+    return {
+      userId,
+      token,
+    };
+  };
+
+  useEffect(() => {
+    init();
+  }, []);
 
   const handleAddress = (event) => {
     setData({ ...data, address: event.target.value });
@@ -41,9 +58,10 @@ const Checkout = ({ products, setRun = (f) => f, run = undefined }) => {
   let deliveryAddress = data.address;
 
   const buy = () => {
+    setData({ loading: true });
     const createOrderData = {
-      products,
-      amount: getTotal(products),
+      products: products,
+      amount: getTotal(),
       address: deliveryAddress,
     };
 
@@ -66,7 +84,7 @@ const Checkout = ({ products, setRun = (f) => f, run = undefined }) => {
 
   const showDropIn = () => (
     <div onBlur={() => setData({ ...data, error: "" })}>
-      {data.token !== null && products.length > 0 ? (
+      {token !== null && products.length > 0 ? (
         <div>
           <div className="gorm-group mb-3">
             <label className="text-muted">Delivery address:</label>
@@ -77,6 +95,7 @@ const Checkout = ({ products, setRun = (f) => f, run = undefined }) => {
               placeholder="Type your delivery address here..."
             />
           </div>
+
           <button onClick={buy} className="btn btn-success btn-block">
             Pay
           </button>
